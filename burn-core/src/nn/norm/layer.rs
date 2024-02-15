@@ -71,12 +71,43 @@ impl<B: Backend> LayerNorm<B> {
 mod tests {
     use super::*;
     use burn_tensor::Data;
+    use rand::{thread_rng, Rng};
+    use std::time::Instant;
 
+    use crate::nn::GroupNormConfig;
     #[cfg(feature = "std")]
     use crate::{TestAutodiffBackend, TestBackend};
 
     #[cfg(not(feature = "std"))]
     use crate::TestBackend;
+
+    // cargo test --release --package burn-core --lib -- nn::norm::layer::tests::compare_gn_ln --exact --nocapture
+    // Time elapsed in ln.forward is: 424.542µs
+    // Time elapsed in gn.forward is: 61µs
+    #[test]
+    fn compare_gn_ln() {
+        const N: usize = 1000;
+        let arr = [(); N].map(|_| thread_rng().gen_range(0.0..1.0));
+        let device = Default::default();
+        let input = Tensor::from_data(Data::from([arr]), &device);
+
+        let start = Instant::now();
+        let module_ln = LayerNormConfig::new(N).init::<TestBackend>(&device);
+        let output_ln = module_ln.forward(input.clone());
+        let duration = start.elapsed();
+        println!("Time elapsed in ln.forward is: {:?}", duration);
+
+        let start = Instant::now();
+        let module_gn = GroupNormConfig::new(1, N).init::<TestBackend>(&device);
+        let output_gn = module_gn.forward(input.clone());
+        let duration = start.elapsed();
+        println!("Time elapsed in gn.forward is: {:?}", duration);
+
+        // The output of the layer norm and group norm should be the same
+        output_gn
+            .to_data()
+            .assert_approx_eq(&output_ln.to_data(), 3);
+    }
 
     #[test]
     fn layer_norm_forward() {
