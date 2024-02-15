@@ -82,11 +82,18 @@ mod tests {
     use crate::TestBackend;
 
     // cargo test --release --package burn-core --lib -- nn::norm::layer::tests::compare_gn_ln --exact --nocapture
+    // const N: usize = 100;
+    // Time elapsed in ln.forward is: 364µs
+    // Time elapsed in gn.forward is: 49.75µs
+    // const N: usize = 1000;
     // Time elapsed in ln.forward is: 424.542µs
     // Time elapsed in gn.forward is: 61µs
+    // const N: usize = 10000;
+    // Time elapsed in ln.forward is: 588.875µs
+    // Time elapsed in gn.forward is: 202.458µs
     #[test]
     fn compare_gn_ln() {
-        const N: usize = 1000;
+        const N: usize = 100;
         let arr = [(); N].map(|_| thread_rng().gen_range(0.0..1.0));
         let device = Default::default();
         let input = Tensor::from_data(Data::from([arr]), &device);
